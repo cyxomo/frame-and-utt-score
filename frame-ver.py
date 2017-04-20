@@ -1,6 +1,7 @@
 #encsssssssssssssoding=utf-8
 import numpy as np
 from multiprocessing import Pool
+import sys
 
 
 def cos_distance(x, y):
@@ -59,7 +60,6 @@ def parser_test(feature_file, feature_length_file):
                 continue
 
             if '[' in line:
-                # 开始一个Speaker的句子
                 line = line.split()
                 assert(len(line) == 2)
                 now_file_name = line[0]
@@ -67,7 +67,6 @@ def parser_test(feature_file, feature_length_file):
                 continue
 
             elif ']' in line:
-                # 当前Speaker的最后一行，处理完后去掉Speaker
                 line = line.split()
                 assert(len(line) == 401)
                 assert(']' in line)
@@ -92,7 +91,6 @@ def parser_test(feature_file, feature_length_file):
                 now_frame_id = -100
                 continue
             else:
-                # 中间的句子
                 line = line.split()
                 assert(len(line) == 400)
 
@@ -145,7 +143,6 @@ def frame2utt_score(model_file, test_len_file, test_file, trials_file, out_file)
             test_feature = norm_feature(test_feature)
             if not test_file_name in testlist:
                 testlist.append(test_file_name)
-                uttscoredict[test_file_name] = []
                 testdict[test_file_name] = []
             testdict[test_file_name].append(test_feature)
 
@@ -169,14 +166,12 @@ def frame2frame_score(model_file, test_len_file, test_file, trials_file, out_fil
             if len(line.strip()) == 0:
                 continue
             if '[' in line:
-                # 开始一个Speaker的句子
                 line = line.split()
                 assert(len(line) == 2)
                 now_file_name = line[0]
                 modeldict[now_file_name] = []
                 continue
             elif ']' in line:
-                # 当前Speaker的最后一行，处理完后去掉Speaker
                 line = line.split()
                 assert(len(line) == 401)
                 assert(']' in line)
@@ -210,7 +205,6 @@ def frame2frame_score(model_file, test_len_file, test_file, trials_file, out_fil
         test_feature = norm_feature(test_feature)
         if not test_file_name in testlist:
             testlist.append(test_file_name)
-            uttscoredict[test_file_name] = []
             testdict[test_file_name] = []
         testdict[test_file_name].append(test_feature)
 
@@ -253,4 +247,11 @@ def acc_stat(file, topn):
 
 
 if __name__ == '__main__':
-    utt2utt_score(model_file, test_file, trials_file, out_score)
+    model_file= sys.argv[1]
+    test_file=sys.argv[2]
+    test_len_file=sys.argv[3]
+    trials_file = sys.argv[4]
+    out_file = sys.argv[5]
+    #utt2utt_score(model_file, test_file, trials_file, out_score)
+    frame2utt_score(model_file, test_len_file, test_file, trials_file, out_file)
+    #frame2frame_score(model_file, test_len_file, test_file, trials_file, out_file)
