@@ -13,20 +13,8 @@ def cos_distance(x, y):
 
 def norm_feature(x):
     x = np.array(x)
-    #return x
-    return x / ((np.sum(x**2.0))**(1.0 / 2))
-
-
-def sample(file, out_file, line_cnt):
-    with open(file) as f:
-        with open(out_file, 'w') as fout:
-            cnt = 0
-            for a in f:
-                fout.write(a)
-
-                cnt += 1
-                if cnt == line_cnt:
-                    break
+    return x
+    #return x / ((np.sum(x**2.0))**(1.0 / 2))
 
 
 def parser_train(file):
@@ -193,13 +181,14 @@ def frame2frame_score(model_file, test_len_file, test_file, trials_file, out_fil
                 feature_vec = np.array([float(i) for i in line])
                 feature_vec = norm_feature(feature_vec)
                 modeldict[now_file_name].append(feature_vec)
+
     modelmean = {} 
     score_mean_dict = {}
     score_std_dict = {}   
     for key in modeldict.keys():
         trainscorelist = []
         meanutt = np.mean(modeldict[key],0)
-        modelmean[key] = meanutt / np.linalg.norm(meanutt, ord=2)
+        modelmean[key] = 20 * meanutt / np.linalg.norm(meanutt, ord=2)
         for ff in modeldict[key]:
             frame_score = cos_distance(modelmean[key], ff)
             trainscorelist.append(frame_score)
