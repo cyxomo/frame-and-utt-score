@@ -145,21 +145,10 @@ def process_all_distance(model_file, test_file, test_len_file, out_file):
             fout.write("\n")
             # fout.write("[{},{},{},[{}]]\n".format(test_speaker, frame_id, rank, ",".join([str(i[1]) for i in sorted_dis])))
 
-def fun(model_file, featslen, test_file, out_score):
-    def cal_distance(model, test_feature, test_speaker):
-        all_dis = []
-        for speaker in all_speaker:
-            feature = model[speaker]
-            all_dis.append([speaker, cos_distance(feature, test_feature)])
-        sorted_dis = sorted(all_dis, key=lambda x: -x[1])
 
-        rank = -1
-        for i in range(len(sorted_dis)):
-            if sorted_dis[i][0] == test_speaker:
-                rank = i + 1
-                break
 
-        return rank, sorted_dis
+
+def frame2utt_score(model_file, featslen, test_file, trials_file, out_score):
 
     model = {}
     for speaker, feature in parser_train(model_file):
@@ -169,22 +158,30 @@ def fun(model_file, featslen, test_file, out_score):
 
         model[speaker] = norm_feature(feature)
     all_speaker = model.keys()
-    uttscoredict = {}
-    uttlist = []
+    testdict = {}
+    testlist = []
     with open(out_file, 'w') as fout:
         # fout.write("[{}]\n".format(",".join(all_speaker)))
         for test_file_name, test_feature, frame_id in parser_test(test_file, test_len_file):
             test_feature = norm_feature(test_feature)
-            if not test_file_name in uttlist:
-                uttlist.append(test_file_name)
+            if not test_file_name in testlist:
+                testlist.append(test_file_name)
                 uttscoredict[test_file_name] = []
-            test_speaker = test_file_name.split('-')[0]
-            rank, sorted_dis = cal_distance(model, test_feature, test_speaker)
-            frame_score = round(sorted_dis[rank - 1][1], 4)
-            uttscoredict[test_file_name].append(frame_score)
-        for utt in uttscoredict.keys():
-            score_mean = np.mean(uttscoredict[utt])
-            out =
+                testdict[test_file_name] = []
+            testdict[test_file_name].append(test_feature)
+
+        with open(trials_file, 'r') as trials:
+            for line in trials:
+                part = line.split()
+                scorelist = []
+                # part[0] = spk  part[1] = utt
+                for testframevec in testdict[part[1]]:
+                    frame_score = cos_distance(model[part[0]], testframevec)
+                    scorelist.append(frame_score)
+                utt_score = np.mean(scorelist)
+                out = part[0] + ' ' +part[1] +' ' +str(utt_score) + ' ' + part[2]
+                fout.write(out)
+
             
 
 
