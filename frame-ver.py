@@ -167,11 +167,11 @@ def utt2utt_score(model_file, test_file, trials_file, out_score):
         for line in trials:
             part = line.split()
             score = cos_distance(model[part[0]], testutt[part[1]])
-            out = part[0] + ' ' +part[1] +' ' +str(score) + ' ' + part[2]
+            out = part[0] + ' ' +part[1] +' ' +str(score) + ' ' + part[2] + '\n'
             fout.write(out)
 
 
-def frame2utt_score(model_file, test_len_file, test_file, trials_file, out_score):
+def frame2utt_score(model_file, test_len_file, test_file, trials_file, out_file):
 
     model = {}
     for speaker, feature in parser_train(model_file):
@@ -202,10 +202,85 @@ def frame2utt_score(model_file, test_len_file, test_file, trials_file, out_score
                     frame_score = cos_distance(model[part[0]], testframevec)
                     scorelist.append(frame_score)
                 utt_score = np.mean(scorelist)
-                out = part[0] + ' ' +part[1] +' ' +str(utt_score) + ' ' + part[2]
+                out = part[0] + ' ' +part[1] +' ' +str(utt_score) + ' ' + part[2] + '\n'
                 fout.write(out)
 
-            
+def frame2frame_score(model_file, test_len_file, test_file, trials_file, out_file):
+    modeldict = {}
+    with open(model_file, 'r') as mf:
+        now_file_name = "[None]"
+        for line in mf:
+            if len(line.strip()) == 0:
+                continue
+            if '[' in line:
+                # 开始一个Speaker的句子
+                line = line.split()
+                assert(len(line) == 2)
+                now_file_name = line[0]
+                modeldict[now_file_name] = []
+                continue
+            elif ']' in line:
+                # 当前Speaker的最后一行，处理完后去掉Speaker
+                line = line.split()
+                assert(len(line) == 401)
+                assert(']' in line)
+
+                line = line[:-1]
+
+                assert(len(line) == 400)
+                assert(']' not in line)
+
+                feature_vec = np.array([float(i) for i in line])
+                feature_vec = norm_feature(feature_vec)
+                modeldict[now_file_name].append(feature_vec)
+
+                now_file_name = "[None]"
+                continue
+            else:
+                line = line.split()
+                assert(len(line) == 400)
+                feature_vec = np.array([float(i) for i in line])
+                feature_vec = norm_feature(feature_vec)
+                modeldict[now_file_name].append(feature_vec)
+    modelmean = {}    
+    for key in modeldict.keys():
+        meanutt = np.mean(modeldict[key],0)
+        modelmean[key] = meanutt / np.linalg.norm(meanutt, ord=2)
+    del modeldict
+
+    testdict = {}
+    testlist = []
+    for test_file_name, test_feature, frame_id in parser_test(test_file, test_len_file):
+        test_feature = norm_feature(test_feature)
+        if not test_file_name in testlist:
+            testlist.append(test_file_name)
+            uttscoredict[test_file_name] = []
+            testdict[test_file_name] = []
+        testdict[test_file_name].append(test_feature)
+
+    with open(out_file, 'w') as fout:
+        with open(trials_file, 'r') as trials:
+            for line in trials:
+                part = line.split()
+                scorelist = []
+                # part[0] = spk  part[1] = utt
+                for testframevec in testdict[part[1]]:
+                    frame_score = cos_distance(modelmean[part[0]], testframevec)
+                    scorelist.append(frame_score)
+                score_mean = np.mean(scorelist)
+                score_std = np.std(scorelist)
+                scoframe = []
+                for ss in scorelist:
+                    scoframe .append( (ss - score_mean) / score_std )
+
+                finscore = np.mean(scoframe)
+
+                out = part[0] + ' ' +part[1] +' ' +str(finscore) + ' ' + part[2] + '\n'
+                fout.write(out)
+
+
+
+
 
 
 def acc_stat(file, topn):
