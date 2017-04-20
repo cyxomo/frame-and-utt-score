@@ -146,9 +146,32 @@ def process_all_distance(model_file, test_file, test_len_file, out_file):
             # fout.write("[{},{},{},[{}]]\n".format(test_speaker, frame_id, rank, ",".join([str(i[1]) for i in sorted_dis])))
 
 
+def utt2utt_score(model_file, test_file, trials_file, out_score):
+    model = {}
+    for speaker, feature in parser_train(model_file):
+        if speaker in model:
+            print(speaker, 'has in model!')
+            assert(speaker not in model)
+
+        model[speaker] = norm_feature(feature)
+
+    testutt = {}
+    for uttintest, feature in parser_train(test_file):
+        if uttintest in model:
+            print(uttintest, 'has in test.ark!')
+            assert(uttintest not in testutt)
+
+        testutt[speaker] = norm_feature(feature)
+
+    with open(trials_file, 'r') as trials:
+        for line in trials:
+            part = line.split()
+            score = cos_distance(model[part[0]], testutt[part[1]])
+            out = part[0] + ' ' +part[1] +' ' +str(score) + ' ' + part[2]
+            fout.write(out)
 
 
-def frame2utt_score(model_file, featslen, test_file, trials_file, out_score):
+def frame2utt_score(model_file, test_len_file, test_file, trials_file, out_score):
 
     model = {}
     for speaker, feature in parser_train(model_file):
