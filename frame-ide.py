@@ -1,7 +1,7 @@
 #encoding=utf-8
 import numpy as np
 from multiprocessing import Pool
-
+import sys
 
 def cos_distance(x, y):
     # x = np.array(x)
@@ -142,7 +142,7 @@ def process_all_distance(model_file, test_file, test_len_file, out_file):
             fout.write("\n")
             # fout.write("[{},{},{},[{}]]\n".format(test_speaker, frame_id, rank, ",".join([str(i[1]) for i in sorted_dis])))
 
-def utt2utt_score(model_file, test_file, trials_file, out_score):
+def utt2utt_score(model_file, test_file, out_score):
     def cal_distance(model, test_feature, test_speaker):
         all_dis = []
         for speaker in all_speaker:
@@ -294,7 +294,7 @@ def frame2frame_score(model_file, test_file, test_len_file, out_file):
 
     with open(out_file, 'w') as fout:
         # fout.write("[{}]\n".format(",".join(all_speaker)))
-        for utttest in testdict.key()
+        for utttest in testdict.key():
             score_mat = []
             test_speaker = utttest.split('-')[0]
             for frame_vec in testdict[utttest]:
@@ -307,7 +307,7 @@ def frame2frame_score(model_file, test_file, test_len_file, out_file):
             spk_score_list = []
             for i in range(len(score_mat)):
                 sss = np.mean( (score_mat[i] - score_mean) / score_std)
-                spk_score_list.append([all_speaker[i] sss])
+                spk_score_list.append([all_speaker[i], sss])
 
             sorted_dis = sorted(spk_score_list, key=lambda x: -x[1])
             rank = -1
@@ -331,7 +331,7 @@ if __name__ == '__main__':
     model_file= sys.argv[1]
     test_file=sys.argv[2]
     test_len_file=sys.argv[3]
-    out_file = sys.argv[5]
+    out_file = sys.argv[4]
     utt2utt_score(model_file, test_file, out_file)
     #frame2utt_score(model_file, test_len_file, test_file, out_file)
     #frame2frame_score(model_file, test_len_file, test_file, out_file)
