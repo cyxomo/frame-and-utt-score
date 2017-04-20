@@ -58,7 +58,6 @@ def parser_test(feature_file, feature_length_file):
                 continue
 
             if '[' in line:
-                # 开始一个Speaker的句子
                 line = line.split()
                 assert(len(line) == 2)
                 now_file_name = line[0]
@@ -66,7 +65,6 @@ def parser_test(feature_file, feature_length_file):
                 continue
 
             elif ']' in line:
-                # 当前Speaker的最后一行，处理完后去掉Speaker
                 line = line.split()
                 assert(len(line) == 401)
                 assert(']' in line)
@@ -91,7 +89,6 @@ def parser_test(feature_file, feature_length_file):
                 now_frame_id = -100
                 continue
             else:
-                # 中间的句子
                 line = line.split()
                 assert(len(line) == 400)
 
@@ -145,51 +142,196 @@ def process_all_distance(model_file, test_file, test_len_file, out_file):
             fout.write("\n")
             # fout.write("[{},{},{},[{}]]\n".format(test_speaker, frame_id, rank, ",".join([str(i[1]) for i in sorted_dis])))
 
+def utt2utt_score(model_file, test_file, trials_file, out_score):
+    def cal_distance(model, test_feature, test_speaker):
+        all_dis = []
+        for speaker in all_speaker:
+            feature = model[speaker]
+            all_dis.append([speaker, cos_distance(feature, test_feature)])
+        sorted_dis = sorted(all_dis, key=lambda x: -x[1])
 
-def acc_stat(file, topn):
-    right = 0
-    tot = 0
-    with open(file) as f:
-        for line in f:
-            line = line.split()
+        rank = -1
+        for i in range(len(sorted_dis)):
+            if sorted_dis[i][0] == test_speaker:
+                rank = i + 1
+                break
 
-            file = line[0]
-            rank = int(line[2])
+        return rank, sorted_dis
+    model = {}
+    for speaker, feature in parser_train(model_file):
+        if speaker in model:
+            print(speaker, 'has in model!')
+            assert(speaker not in model)
 
-            if rank <= topn:
-                right += 1
-            tot += 1
-    return 1.0 * right / tot
+        model[speaker] = norm_feature(feature)
+    all_speaker = model.keys()
 
-
-def process_mean_file(test_file, test_len_file, out_file):
     with open(out_file, 'w') as fout:
-        pre_test_file_name = ""
-        pre_frame_cnt = 0
-        pre_sum_feature = np.zeros(400)
+        # fout.write("[{}]\n".format(",".join(all_speaker)))
+        for test_file_name, test_feature in parser_train(test_file):
+            test_feature = norm_feature(test_feature) # cos距离是就不用Norm了
+
+            test_speaker = test_file_name.split('-')[0]
+            rank, sorted_dis = cal_distance(model, test_feature, test_speaker)
+            # fout.write("{} {} {}\n".format(test_file_name, frame_id, rank))
+            fout.write(" ".join([
+                str(sorted_dis[rank - 1][0]),
+                test_file_name,
+                str(rank),
+                str(round(sorted_dis[rank - 1][1], 4)),
+            ]))
+            fout.write("\n")
+
+
+def frame2utt_score(model_file, test_file, test_len_file, out_file):
+    def cal_distance(model, test_feature, test_speaker):
+        all_dis = []
+        for speaker in all_speaker:
+            feature = model[speaker]
+            all_dis.append([speaker, cos_distance(feature, test_feature)])
+        sorted_dis = sorted(all_dis, key=lambda x: -x[1])
+
+        rank = -1
+        for i in range(len(sorted_dis)):
+            if sorted_dis[i][0] == test_speaker:
+                rank = i + 1
+                break
+
+        return rank, sorted_dis
+
+    model = {}
+    for speaker, feature in parser_train(model_file):
+        if speaker in model:
+            print(speaker, 'has in model!')
+            assert(speaker not in model)
+
+        model[speaker] = norm_feature(feature) 
+    all_speaker = model.keys()
+
+    with open(out_file, 'w') as fout:
+        # fout.write("[{}]\n".format(",".join(all_speaker)))
         for test_file_name, test_feature, frame_id in parser_test(test_file, test_len_file):
-            if test_file_name != pre_test_file_name:
-                if pre_test_file_name != "":
-                    fout.write(" ".join([
-                        pre_test_file_name,
-                        "[\n" + " ".join([str(i) for i in (pre_sum_feature / pre_frame_cnt)]) + " ]",
-                        ]))
-                    fout.write("\n")
+            test_feature = norm_feature(test_feature) 
 
-                    pre_test_file_name = ""
-                    pre_frame_cnt = 0
-                    pre_sum_feature = np.zeros(400)
+            test_speaker = test_file_name.split('-')[0]
+            rank, sorted_dis = cal_distance(model, test_feature, test_speaker)
+            # fout.write("{} {} {}\n".format(test_file_name, frame_id, rank))
+            fout.write(" ".join([
+                str(sorted_dis[rank - 1][0]),
+                test_file_name,
+                str(rank),
+                str(round(sorted_dis[rank - 1][1], 4)),
+            ]))
+            fout.write("\n")
+            # fout.write("[{},{},{},[{}]]\n".format(test_speaker, frame_id, rank, ",".join([str(i[1]) for i in sorted_dis])))
 
-            pre_test_file_name = test_file_name
-            pre_frame_cnt += 1
-            pre_sum_feature += test_feature
+def frame2frame_score(model_file, test_file, test_len_file, out_file):
+    def cal_distance2(model, test_feature, test_speaker):
+        all_dis = []
+        for speaker in all_speaker:
+            feature = model[speaker]
+            all_dis.append([cos_distance(feature, test_feature)])
+
+        return all_dis
+
+    modeldict = {}
+    with open(model_file, 'r') as mf:
+        now_file_name = "[None]"
+        for line in mf:
+            if len(line.strip()) == 0:
+                continue
+            if '[' in line:
+                line = line.split()
+                assert(len(line) == 2)
+                now_file_name = line[0]
+                modeldict[now_file_name] = []
+                continue
+            elif ']' in line:
+                line = line.split()
+                assert(len(line) == 401)
+                assert(']' in line)
+
+                line = line[:-1]
+
+                assert(len(line) == 400)
+                assert(']' not in line)
+
+                feature_vec = np.array([float(i) for i in line])
+                feature_vec = norm_feature(feature_vec)
+                modeldict[now_file_name].append(feature_vec)
+
+                now_file_name = "[None]"
+                continue
+            else:
+                line = line.split()
+                assert(len(line) == 400)
+                feature_vec = np.array([float(i) for i in line])
+                feature_vec = norm_feature(feature_vec)
+                modeldict[now_file_name].append(feature_vec)
+    modelmean = {} 
+    score_mean_dict = {}
+    score_std_dict = {}   
+    for key in modeldict.keys():
+        trainscorelist = []
+        meanutt = np.mean(modeldict[key],0)
+        modelmean[key] = meanutt / np.linalg.norm(meanutt, ord=2)
+        for ff in modeldict[key]:
+            frame_score = cos_distance(modelmean[key], ff)
+            trainscorelist.append(frame_score)
+        score_mean_dict[key] = np.mean(trainscorelist)
+        score_std_dict[key] = np.std(trainscorelist)
+    del modeldict
+    all_speaker = modelmean.keys()
+
+    testdict = {}
+    testlist = []
+    for test_file_name, test_feature, frame_id in parser_test(test_file, test_len_file):
+        test_feature = norm_feature(test_feature)
+        if not test_file_name in testlist:
+            testlist.append(test_file_name)
+            testdict[test_file_name] = []
+        testdict[test_file_name].append(test_feature)
+
+    with open(out_file, 'w') as fout:
+        # fout.write("[{}]\n".format(",".join(all_speaker)))
+        for utttest in testdict.key()
+            score_mat = []
+            test_speaker = utttest.split('-')[0]
+            for frame_vec in testdict[utttest]:
+                all_dis = cal_distance2(modelmean, frame_vec, test_speaker)
+                score_mat.append(all_dis)
+            score_mat = np.array(score_mat)
+            score_mat = np.transpose(score_mat)
+            score_mean = score_mean_dict[part[0]]
+            score_std = score_std_dict[part[0]]
+            spk_score_list = []
+            for i in range(len(score_mat)):
+                sss = np.mean( (score_mat[i] - score_mean) / score_std)
+                spk_score_list.append([all_speaker[i] sss])
+
+            sorted_dis = sorted(spk_score_list, key=lambda x: -x[1])
+            rank = -1
+            for i in range(len(sorted_dis)):
+                if sorted_dis[i][0] == test_speaker:
+                    rank = i + 1
+                    break
+            # fout.write("{} {} {}\n".format(test_file_name, frame_id, rank))
+            fout.write(" ".join([
+                str(sorted_dis[rank - 1][0]),
+                test_file_name,
+                str(rank),
+                str(round(sorted_dis[rank - 1][1], 4)),
+            ]))
+            fout.write("\n")
+            # fout.write("[{},{},{},[{}]]\n".format(test_speaker, frame_id, rank, ",".join([str(i[1]) for i in sorted_dis])))
+
 
 
 if __name__ == '__main__':
-
-    #sample('test.ark', 'haha.txt', line_cnt=223+218+146+3)
-    #sample('test.ark', 'haha.ark', line_cnt=2920)
-    #process_all_distance('train.ark', 'test.ark', 'feats.len', 'distance222.txt')
-    print(acc_stat('distance.txt', 1))
-
-    #process_mean_file('test.ark', 'feats.len', 'mean_test.ark')
+    model_file= sys.argv[1]
+    test_file=sys.argv[2]
+    test_len_file=sys.argv[3]
+    out_file = sys.argv[5]
+    utt2utt_score(model_file, test_file, out_file)
+    #frame2utt_score(model_file, test_len_file, test_file, out_file)
+    #frame2frame_score(model_file, test_len_file, test_file, out_file)
