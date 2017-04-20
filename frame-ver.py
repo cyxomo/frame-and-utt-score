@@ -12,6 +12,7 @@ def cos_distance(x, y):
 
 def norm_feature(x):
     x = np.array(x)
+    #return x
     return x / ((np.sum(x**2.0))**(1.0 / 2))
 
 
@@ -100,52 +101,6 @@ def parser_test(feature_file, feature_length_file):
                 now_frame_id += 1
 
 
-def process_all_distance(model_file, test_file, test_len_file, out_file):
-    def cal_distance(model, test_feature, test_speaker):
-        all_dis = []
-        for speaker in all_speaker:
-            feature = model[speaker]
-            all_dis.append([speaker, cos_distance(feature, test_feature)])
-        sorted_dis = sorted(all_dis, key=lambda x: -x[1])
-
-        rank = -1
-        for i in range(len(sorted_dis)):
-            if sorted_dis[i][0] == test_speaker:
-                rank = i + 1
-                break
-
-        return rank, sorted_dis
-
-    model = {}
-    for speaker, feature in parser_train(model_file):
-        if speaker in model:
-            print(speaker, 'has in model!')
-            assert(speaker not in model)
-
-        model[speaker] = norm_feature(feature) # cos距离是就不用Norm了
-    all_speaker = model.keys()
-
-    with open(out_file, 'w') as fout:
-        # fout.write("[{}]\n".format(",".join(all_speaker)))
-        for test_file_name, test_feature, frame_id in parser_test(test_file, test_len_file):
-            test_feature = norm_feature(test_feature) # cos距离是就不用Norm了
-
-            test_speaker = test_file_name.split('-')[0]
-            rank, sorted_dis = cal_distance(model, test_feature, test_speaker)
-            # fout.write("{} {} {}\n".format(test_file_name, frame_id, rank))
-            fout.write(" ".join([
-                test_file_name,
-                str(frame_id),
-                str(rank),
-                str(sorted_dis[rank - 1][0]),
-                str(round(sorted_dis[rank - 1][1], 4)),
-                str(sorted_dis[0][0]),
-                str(round(sorted_dis[0][1], 4)),
-            ]))
-            fout.write("\n")
-            # fout.write("[{},{},{},[{}]]\n".format(test_speaker, frame_id, rank, ",".join([str(i[1]) for i in sorted_dis])))
-
-
 def utt2utt_score(model_file, test_file, trials_file, out_score):
     model = {}
     for speaker, feature in parser_train(model_file):
@@ -163,6 +118,7 @@ def utt2utt_score(model_file, test_file, trials_file, out_score):
 
         testutt[speaker] = norm_feature(feature)
 
+    fout = open(out_score, 'w')
     with open(trials_file, 'r') as trials:
         for line in trials:
             part = line.split()
@@ -279,10 +235,6 @@ def frame2frame_score(model_file, test_len_file, test_file, trials_file, out_fil
                 fout.write(out)
 
 
-
-
-
-
 def acc_stat(file, topn):
     right = 0
     tot = 0
@@ -299,33 +251,6 @@ def acc_stat(file, topn):
     return 1.0 * right / tot
 
 
-def process_mean_file(test_file, test_len_file, out_file):
-    with open(out_file, 'w') as fout:
-        pre_test_file_name = ""
-        pre_frame_cnt = 0
-        pre_sum_feature = np.zeros(400)
-        for test_file_name, test_feature, frame_id in parser_test(test_file, test_len_file):
-            if test_file_name != pre_test_file_name:
-                if pre_test_file_name != "":
-                    fout.write(" ".join([
-                        pre_test_file_name,
-                        "[\n" + " ".join([str(i) for i in (pre_sum_feature / pre_frame_cnt)]) + " ]",
-                        ]))
-                    fout.write("\n")
-
-                    pre_test_file_name = ""
-                    pre_frame_cnt = 0
-                    pre_sum_feature = np.zeros(400)
-
-            pre_test_file_name = test_file_name
-            pre_frame_cnt += 1
-            pre_sum_feature += test_feature
-
 
 if __name__ == '__main__':
-
-    #sample('test.ark', 'haha.txt', line_cnt=223+218+146+3)
-    #process_all_distance('train.ark', 'test.ark', 'feats.len', 'distance222.txt')
-    print(acc_stat('distance.txt', 1))
-
-    #process_mean_file('test.ark', 'feats.len', 'mean_test.ark')
+    utt2utt_score(model_file, test_file, trials_file, out_score)
