@@ -184,20 +184,13 @@ def utt2utt_score(model_file, test_file, out_score):
 
 
 def frame2utt_score(model_file, test_file, test_len_file, out_file):
-    def cal_distance(model, test_feature, test_speaker):
+    def cal_distance2(model, test_feature, test_speaker):
         all_dis = []
         for speaker in all_speaker:
             feature = model[speaker]
-            all_dis.append([speaker, cos_distance(feature, test_feature)])
-        sorted_dis = sorted(all_dis, key=lambda x: -x[1])
+            all_dis.append(cos_distance(feature, test_feature))
 
-        rank = -1
-        for i in range(len(sorted_dis)):
-            if sorted_dis[i][0] == test_speaker:
-                rank = i + 1
-                break
-
-        return rank, sorted_dis
+        return all_dis
 
     model = {}
     for speaker, feature in parser_train(model_file):
@@ -208,17 +201,39 @@ def frame2utt_score(model_file, test_file, test_len_file, out_file):
         model[speaker] = norm_feature(feature) 
     all_speaker = model.keys()
 
+    testdict = {}
+    testlist = []
+    for test_file_name, test_feature, frame_id in parser_test(test_file, test_len_file):
+        test_feature = norm_feature(test_feature)
+        if not test_file_name in testlist:
+            testlist.append(test_file_name)
+            testdict[test_file_name] = []
+        testdict[test_file_name].append(test_feature)
+
     with open(out_file, 'w') as fout:
         # fout.write("[{}]\n".format(",".join(all_speaker)))
-        for test_file_name, test_feature, frame_id in parser_test(test_file, test_len_file):
-            test_feature = norm_feature(test_feature) 
-
-            test_speaker = test_file_name.split('-')[0]
-            rank, sorted_dis = cal_distance(model, test_feature, test_speaker)
-            # fout.write("{} {} {}\n".format(test_file_name, frame_id, rank))
+        for utttest in testdict.keys():
+            score_mat = []
+            test_speaker = utttest.split('-')[0]
+            for frame_vec in testdict[utttest]:
+                all_dis = cal_distance2(model, frame_vec, test_speaker)
+                score_mat.append(all_dis)
+            score_mat = np.array(score_mat)
+            score_mat = np.transpose(score_mat)
+            
+            spk_score_list = []
+            for i in range(len(score_mat)):
+                sss = np.mean( score_mat[i] )
+                spk_score_list.append([all_speaker[i], sss])
+            sorted_dis = sorted(spk_score_list, key=lambda x: -x[1])
+            rank = -1
+            for i in range(len(sorted_dis)):
+                if sorted_dis[i][0] == test_speaker:
+                    rank = i + 1
+                    break
             fout.write(" ".join([
                 str(sorted_dis[rank - 1][0]),
-                test_file_name,
+                utttest,
                 str(rank),
                 str(round(sorted_dis[rank - 1][1], 4)),
             ]))
@@ -230,7 +245,7 @@ def frame2frame_score(model_file, test_file, test_len_file, out_file):
         all_dis = []
         for speaker in all_speaker:
             feature = model[speaker]
-            all_dis.append([cos_distance(feature, test_feature)])
+            all_dis.append(cos_distance(feature, test_feature))
 
         return all_dis
 
@@ -294,7 +309,7 @@ def frame2frame_score(model_file, test_file, test_len_file, out_file):
 
     with open(out_file, 'w') as fout:
         # fout.write("[{}]\n".format(",".join(all_speaker)))
-        for utttest in testdict.key():
+        for utttest in testdict.keys():
             score_mat = []
             test_speaker = utttest.split('-')[0]
             for frame_vec in testdict[utttest]:
@@ -318,7 +333,7 @@ def frame2frame_score(model_file, test_file, test_len_file, out_file):
             # fout.write("{} {} {}\n".format(test_file_name, frame_id, rank))
             fout.write(" ".join([
                 str(sorted_dis[rank - 1][0]),
-                test_file_name,
+                utttest,
                 str(rank),
                 str(round(sorted_dis[rank - 1][1], 4)),
             ]))
