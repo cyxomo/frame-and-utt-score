@@ -110,11 +110,11 @@ def utt2utt_score(model_file, test_file, trials_file, out_score):
 
     testutt = {}
     for uttintest, feature in parser_train(test_file):
-        if uttintest in model:
+        if uttintest in testutt:
             print(uttintest, 'has in test.ark!')
             assert(uttintest not in testutt)
 
-        testutt[speaker] = norm_feature(feature)
+        testutt[uttintest] = norm_feature(feature)
 
     fout = open(out_score, 'w')
     with open(trials_file, 'r') as trials:
@@ -220,6 +220,7 @@ def frame2frame_score(model_file, test_len_file, test_file, trials_file, out_fil
                 score_mean = np.mean(scorelist)
                 score_std = np.std(scorelist)
                 scoframe = []
+                print scorelist
                 for ss in scorelist:
                     scoframe .append( (ss - score_mean) / score_std )
 
@@ -252,6 +253,6 @@ if __name__ == '__main__':
     test_len_file=sys.argv[3]
     trials_file = sys.argv[4]
     out_file = sys.argv[5]
-    #utt2utt_score(model_file, test_file, trials_file, out_score)
-    frame2utt_score(model_file, test_len_file, test_file, trials_file, out_file)
+    utt2utt_score(model_file, test_file, trials_file, out_file)
+    #frame2utt_score(model_file, test_len_file, test_file, trials_file, out_file)
     #frame2frame_score(model_file, test_len_file, test_file, trials_file, out_file)
