@@ -332,6 +332,6 @@ if __name__ == '__main__':
     test_file=sys.argv[2]
     test_len_file=sys.argv[3]
     out_file = sys.argv[4]
-    utt2utt_score(model_file, test_file, out_file)
-    #frame2utt_score(model_file, test_len_file, test_file, out_file)
-    #frame2frame_score(model_file, test_len_file, test_file, out_file)
+    #utt2utt_score(model_file, test_file, out_file)
+    frame2utt_score(model_file, test_file, test_len_file, out_file)
+    #frame2frame_score(model_file, test_file, test_len_file, out_file)
