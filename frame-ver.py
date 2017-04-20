@@ -193,10 +193,18 @@ def frame2frame_score(model_file, test_len_file, test_file, trials_file, out_fil
                 feature_vec = np.array([float(i) for i in line])
                 feature_vec = norm_feature(feature_vec)
                 modeldict[now_file_name].append(feature_vec)
-    modelmean = {}    
+    modelmean = {} 
+    score_mean_dict = {}
+    score_std_dict = {}   
     for key in modeldict.keys():
+        trainscorelist = []
         meanutt = np.mean(modeldict[key],0)
         modelmean[key] = meanutt / np.linalg.norm(meanutt, ord=2)
+        for ff in modeldict[key]:
+            frame_score = cos_distance(modelmean[key], ff)
+            trainscorelist.append(frame_score)
+        score_mean_dict[key] = np.mean(trainscorelist)
+        score_std_dict[key] = np.std(trainscorelist)
     del modeldict
 
     testdict = {}
@@ -217,8 +225,8 @@ def frame2frame_score(model_file, test_len_file, test_file, trials_file, out_fil
                 for testframevec in testdict[part[1]]:
                     frame_score = cos_distance(modelmean[part[0]], testframevec)
                     scorelist.append(frame_score)
-                score_mean = np.mean(scorelist)
-                score_std = np.std(scorelist)
+                score_mean = score_mean_dict[part[0]]
+                score_std = score_std_dict[part[0]]
                 scoframe = []
                 print scorelist
                 for ss in scorelist:
