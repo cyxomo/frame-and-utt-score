@@ -250,6 +250,7 @@ def frame2frame_score(model_file, test_file, test_len_file, out_file):
         return all_dis
 
     modeldict = {}
+    spklist = []
     with open(model_file, 'r') as mf:
         now_file_name = "[None]"
         for line in mf:
@@ -259,7 +260,10 @@ def frame2frame_score(model_file, test_file, test_len_file, out_file):
                 line = line.split()
                 assert(len(line) == 2)
                 now_file_name = line[0]
-                modeldict[now_file_name] = []
+                spk = now_file_name.split('-')[0]
+                if not spk in spklist:
+                    spklist.append(spk) 
+                    modeldict[spk] = []
                 continue
             elif ']' in line:
                 line = line.split()
@@ -273,7 +277,7 @@ def frame2frame_score(model_file, test_file, test_len_file, out_file):
 
                 feature_vec = np.array([float(i) for i in line])
                 feature_vec = norm_feature(feature_vec)
-                modeldict[now_file_name].append(feature_vec)
+                modeldict[spk].append(feature_vec)
 
                 now_file_name = "[None]"
                 continue
@@ -282,7 +286,7 @@ def frame2frame_score(model_file, test_file, test_len_file, out_file):
                 assert(len(line) == 400)
                 feature_vec = np.array([float(i) for i in line])
                 feature_vec = norm_feature(feature_vec)
-                modeldict[now_file_name].append(feature_vec)
+                modeldict[spk].append(feature_vec)
     modelmean = {} 
     score_mean_dict = {}
     score_std_dict = {}   
@@ -312,16 +316,16 @@ def frame2frame_score(model_file, test_file, test_len_file, out_file):
         for utttest in testdict.keys():
             score_mat = []
             test_speaker = utttest.split('-')[0]
+            #test_speaker = utttest
             for frame_vec in testdict[utttest]:
                 all_dis = cal_distance2(modelmean, frame_vec, test_speaker)
                 score_mat.append(all_dis)
             score_mat = np.array(score_mat)
             score_mat = np.transpose(score_mat)
-            score_mean = score_mean_dict[part[0]]
-            score_std = score_std_dict[part[0]]
+
             spk_score_list = []
             for i in range(len(score_mat)):
-                sss = np.mean( (score_mat[i] - score_mean) / score_std)
+                sss = np.mean( (score_mat[i] - score_mean_dict[all_speaker[i]]) / score_std_dict[all_speaker[i]])
                 spk_score_list.append([all_speaker[i], sss])
 
             sorted_dis = sorted(spk_score_list, key=lambda x: -x[1])
@@ -348,5 +352,5 @@ if __name__ == '__main__':
     test_len_file=sys.argv[3]
     out_file = sys.argv[4]
     #utt2utt_score(model_file, test_file, out_file)
-    frame2utt_score(model_file, test_file, test_len_file, out_file)
-    #frame2frame_score(model_file, test_file, test_len_file, out_file)
+    #frame2utt_score(model_file, test_file, test_len_file, out_file)
+    frame2frame_score(model_file, test_file, test_len_file, out_file)
