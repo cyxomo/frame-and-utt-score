@@ -205,6 +205,9 @@ def frame2frame_score(model_file, test_len_file, test_file, trials_file, out_fil
             trainscorelist.append(frame_score)
         score_mean_dict[key] = np.mean(trainscorelist)
         score_std_dict[key] = np.std(trainscorelist)
+        if key == '10653f-03711-A-002468-002887':
+            print trainscorelist
+            print len(modeldict[key])
     del modeldict
 
     testdict = {}
@@ -229,6 +232,7 @@ def frame2frame_score(model_file, test_len_file, test_file, trials_file, out_fil
                 score_std = score_std_dict[part[0]]
                 scoframe = []
                 print scorelist
+                #print score_mean, score_std
                 for ss in scorelist:
                     scoframe .append( (ss - score_mean) / score_std )
 
@@ -261,6 +265,6 @@ if __name__ == '__main__':
     test_len_file=sys.argv[3]
     trials_file = sys.argv[4]
     out_file = sys.argv[5]
-    utt2utt_score(model_file, test_file, trials_file, out_file)
+    #utt2utt_score(model_file, test_file, trials_file, out_file)
     #frame2utt_score(model_file, test_len_file, test_file, trials_file, out_file)
-    #frame2frame_score(model_file, test_len_file, test_file, trials_file, out_file)
+    frame2frame_score(model_file, test_len_file, test_file, trials_file, out_file)
