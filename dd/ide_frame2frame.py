@@ -80,112 +80,6 @@ def parser_test(feature_file, feature_length_file):
                 now_frame_id += 1
 
 
-def utt2utt_score(model_file, test_file, out_score):
-    #compute cosin distance
-    def cal_distance(model, test_feature, test_speaker):
-        all_dis = []
-        for speaker in all_speaker:
-            feature = model[speaker]
-            all_dis.append([speaker, cos_distance(feature, test_feature)])
-        sorted_dis = sorted(all_dis, key=lambda x: -x[1])
-
-        rank = -1
-        for i in range(len(sorted_dis)):
-            if sorted_dis[i][0] == test_speaker:
-                rank = i + 1
-                break
-
-        return rank, sorted_dis
-
-    # input train data
-    model = {}
-    for speaker, feature in parser_train(model_file):
-        if speaker in model:
-            print(speaker, 'has in model!')
-            assert(speaker not in model)
-
-        model[speaker] = np.array(feature)
-    all_speaker = model.keys()
-
-
-    with open(out_file, 'w') as fout:
-        # fout.write("[{}]\n".format(",".join(all_speaker)))
-
-        for test_file_name, test_feature in parser_train(test_file):
-
-            test_feature = np.array(test_feature) # cos距离是就不用Norm了
-            test_speaker = test_file_name.split('-')[0]
-            rank, sorted_dis = cal_distance(model, test_feature, test_speaker)
-            # fout.write("{} {} {}\n".format(test_file_name, frame_id, rank))
-            fout.write(" ".join([
-                str(sorted_dis[rank - 1][0]),
-                test_file_name,
-                str(rank),
-                str(round(sorted_dis[rank - 1][1], 4)),
-            ]))
-            fout.write("\n")
-
-
-def frame2utt_score(model_file, test_file, test_len_file, out_file):
-    #compute cosin distance
-    def cal_distance2(model, test_feature, test_speaker):
-        all_dis = []
-        for speaker in all_speaker:
-            feature = model[speaker]
-            all_dis.append(cos_distance(feature, test_feature))
-
-        return all_dis
-
-    # input train data
-    model = {}
-    for speaker, feature in parser_train(model_file):
-        if speaker in model:
-            print(speaker, 'has in model!')
-            assert(speaker not in model)
-
-        model[speaker] = np.array(feature) 
-    all_speaker = model.keys()
-
-    testdict = {}
-    testlist = []
-    for test_file_name, test_feature, frame_id in parser_test(test_file, test_len_file):
-        test_feature = np.array(test_feature)
-        if not test_file_name in testlist:
-            testlist.append(test_file_name)
-            testdict[test_file_name] = []
-        testdict[test_file_name].append(test_feature)
-
-    with open(out_file, 'w') as fout:
-        # fout.write("[{}]\n".format(",".join(all_speaker)))
-        for utttest in testdict.keys():
-            score_mat = []
-            test_speaker = utttest.split('-')[0]
-            for frame_vec in testdict[utttest]:
-                all_dis = cal_distance2(model, frame_vec, test_speaker)
-                score_mat.append(all_dis)
-            score_mat = np.array(score_mat)
-            score_mat = np.transpose(score_mat)
-            
-            spk_score_list = []
-            for i in range(len(score_mat)):
-                sss = np.mean( score_mat[i] )
-                spk_score_list.append([all_speaker[i], sss])
-            sorted_dis = sorted(spk_score_list, key=lambda x: -x[1])
-            rank = -1
-            for i in range(len(sorted_dis)):
-                if sorted_dis[i][0] == test_speaker:
-                    rank = i + 1
-                    break
-            fout.write(" ".join([
-                str(sorted_dis[rank - 1][0]),
-                utttest,
-                str(rank),
-                str(round(sorted_dis[rank - 1][1], 4)),
-            ]))
-            fout.write("\n")
-            # fout.write("[{},{},{},[{}]]\n".format(test_speaker, frame_id, rank, ",".join([str(i[1]) for i in sorted_dis])))
-
-
 def frame2frame_score(model_file, test_file, test_len_file, out_file):
     #compute cosin distance
     def cal_distance2(model, test_feature, test_speaker):
@@ -299,13 +193,9 @@ def frame2frame_score(model_file, test_file, test_len_file, out_file):
             fout.write("\n")
             # fout.write("[{},{},{},[{}]]\n".format(test_speaker, frame_id, rank, ",".join([str(i[1]) for i in sorted_dis])))
 
-
-
 if __name__ == '__main__':
     model_file= sys.argv[1]
     test_file=sys.argv[2]
     test_len_file=sys.argv[3]
     out_file = sys.argv[4]
-    #utt2utt_score(model_file, test_file, out_file)
-    #frame2utt_score(model_file, test_file, test_len_file, out_file)
     frame2frame_score(model_file, test_file, test_len_file, out_file)
