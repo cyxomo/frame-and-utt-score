@@ -80,7 +80,9 @@ def parser_test(feature_file, feature_length_file):
                 yield(now_file_name, feature_vec, now_frame_id)
                 now_frame_id += 1
 
-def frame2frame_score(model_file, test_len_file, test_file, trials_file, out_file):
+
+
+def norm_train_data(model_file, out_file):
     modeldict = {}
     with open(model_file, 'r') as mf:
         now_file_name = "[None]"
@@ -119,16 +121,39 @@ def frame2frame_score(model_file, test_len_file, test_file, trials_file, out_fil
     modelmean = {} 
     score_mean_dict = {}
     score_std_dict = {}   
-    for key in modeldict.keys():
-        trainscorelist = []
-        meanutt = np.mean(modeldict[key],0)
-        modelmean[key] = 20 * meanutt / np.linalg.norm(meanutt, ord=2)
-        for ff in modeldict[key]:
-            frame_score = cos_distance(modelmean[key], ff)
-            trainscorelist.append(frame_score)
-        score_mean_dict[key] = np.mean(trainscorelist)
-        score_std_dict[key] = np.std(trainscorelist)
-    del modeldict
+    with open(out_file, 'w') as fout:
+        for key in modeldict.keys():
+            trainscorelist = []
+            meanutt = np.mean(modeldict[key],0)
+            modelmean[key] = 20 * meanutt / np.linalg.norm(meanutt, ord=2)
+
+            for ff in modeldict[key]:
+                frame_score = cos_distance(modelmean[key], ff)
+                trainscorelist.append(frame_score)
+            score_mean_dict[key] = np.mean(trainscorelist)
+            score_std_dict[key] = np.std(trainscorelist)
+
+            out = key+' '
+            for vl in modelmean[key]:
+                out = out + vl +' '
+            out = out + score_mean_dict[key]+ ' '
+            out = out + score_std_dict[key] + '\n'
+            fout.write(out)
+
+        del modeldict
+
+def frame2frame_score(model_norm, test_len_file, test_file, trials_file, out_file):
+
+    modelmean = {} 
+    score_mean_dict = {}
+    score_std_dict = {} 
+
+    with open(model_norm, 'r') as mn:
+        for line in mn:
+            part = line.split()
+            modelmean[part[0]] = np.array([float(i) for i in part[1:401]])
+            score_mean_dict[part[0]] = float(part[401])
+            score_std_dict[part[0]] = float(part[402])
 
     testdict = {}
     testlist = []
@@ -165,4 +190,6 @@ if __name__ == '__main__':
     test_len_file=sys.argv[3]
     trials_file = sys.argv[4]
     out_file = sys.argv[5]
-    frame2frame_score(model_file, test_len_file, test_file, trials_file, out_file)
+    norm_model = 'norm_model.ark'
+    norm_train_data(model_file, norm_model)
+    frame2frame_score(norm_model, test_len_file, test_file, trials_file, out_file)
