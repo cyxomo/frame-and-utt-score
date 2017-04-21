@@ -28,8 +28,8 @@ def fun(finpp, trials, foutpp):
 					continue
 
 if __name__ == '__main__':
-	fin = '/work1/lilt/kaldi-161111/egs/sre08/v5/exp_cnn/fisher_2000/nnet3/cnn_4_8_pi2000_po400_l6_splice10/eva_female/dvector.'
-	trials = '/work1/lilt/kaldi-161111/egs/sre08/v5/data_fbank/fisher_test/female/eva_female/trials-1.trl'
-	fout = '/work7/lilt/170421-dvector/ver/frame2utt/trials/shishi/trials_'
+	fin = '/work1/lilt/kaldi-161111/egs/sre08/v5/exp_cnn/fisher_2000/nnet3/cnn_4_8_pi2000_po400_l6_splice10/eva_male/dvector.'
+	trials = '/work1/lilt/kaldi-161111/egs/sre08/v5/data_fbank/fisher_test/male/eva_male/trials-1.trl'
+	fout = '/work7/lilt/170421-dvector/ver/frame2utt/trials/male/trials_'
 
 	fun(fin, trials, fout)
