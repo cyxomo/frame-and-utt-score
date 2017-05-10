@@ -300,7 +300,6 @@ def frame2frame_score(model_file, test_file, test_len_file, out_file):
             # fout.write("[{},{},{},[{}]]\n".format(test_speaker, frame_id, rank, ",".join([str(i[1]) for i in sorted_dis])))
 
 
-
 if __name__ == '__main__':
     model_file= sys.argv[1]
     test_file=sys.argv[2]
